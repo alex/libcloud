@@ -271,6 +271,28 @@ class OpenStackNodeDriver(NodeDriver, OpenStackDriverMixin):
         return self._to_volume(
             self.connection.request('/os-volumes/%s' % volumeId).object)
 
+    def list_volume_snapshots(self, volume):
+        snapshots = self._to_snapshots(
+            self.connection.request('/os-snapshots')
+        )
+        return [
+            snapshot
+            for snapshot in snapshots
+            if snapshot.volume_id == volume.id
+        ]
+
+    def snapshot_volume(self, volume, name):
+        return self._to_snapshot(
+            self.connection.request('/os-snapshots', method='POST', data={
+                'display_name': name,
+                'volume_id': volume.id,
+            })
+        )
+
+    def destroy_snapshot(self, snapshot):
+        return self.connection.request('/os-snapshots/%s' % snapshot.id,
+            method='DELETE').success()
+
     def list_images(self, location=None, ex_only_active=True):
         """
         @inherits: L{NodeDriver.list_images}
@@ -1222,6 +1244,10 @@ class OpenStack_1_1_NodeDriver(OpenStackNodeDriver):
         volumes = obj['volumes']
         return [self._to_volume(volume) for volume in volumes]
 
+    def _to_snapshots(self, obj):
+        snapshots = obj['snapshots']
+        return [self._to_snapshot(snapshot) for snapshot in snapshots]
+
     def _to_sizes(self, obj):
         flavors = obj['flavors']
         return [self._to_size(flavor) for flavor in flavors]
@@ -1740,6 +1766,9 @@ class OpenStack_1_1_NodeDriver(OpenStackNodeDriver):
                 'attachments': [att for att in api_node['attachments'] if att],
             }
         )
+
+    def _to_snapshot(self, api_snapshot):
+        return VolumeSnapshot()
 
     def _to_size(self, api_flavor, price=None, bandwidth=None):
         # if provider-specific subclasses can get better values for
