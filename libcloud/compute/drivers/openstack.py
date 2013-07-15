@@ -1768,7 +1768,10 @@ class OpenStack_1_1_NodeDriver(OpenStackNodeDriver):
         )
 
     def _to_snapshot(self, api_snapshot):
-        return VolumeSnapshot()
+        return VolumeSnapshot(
+            driver=self,
+            id=api_snapshot['id'],
+        )
 
     def _to_size(self, api_flavor, price=None, bandwidth=None):
         # if provider-specific subclasses can get better values for
